@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: model-inference
+  name: predictivemoneymanagement-inference
+spec:
+  containers:  
+  - image: localhost:32000/inference
+    imagePullPolicy: IfNotPresent
+    name: predictivemoneymanagement-inference
+    resources:       
+       # Maximum amount pod can grow upto
+      limits:
+        memory: "500Mi" # Incomppressable / can-not be throttled
+        cpu: "200m" # Compressable resource
+      # Minimum amount of resources required
+      requests: 
+        cpu: "100m"
+        memory: "100Mi"    
+    envFrom:
+    - configMapRef:
+        name: accounttrans.config
+    # NOTE!: Host path should be chagned to nfs volumes in cluster mode
+    volumeMounts:
+    - mountPath: /volume/files/
+      name: proc-files-path
+  volumes:
+  - name: proc-files-path
+    hostPath:
+      # directory location on host
+      path: /home/spiretech/data/ingage/accounts_transactions
+      # this field is optional
+      type: Directory
+  imagePullSecrets:
+  - name: spiretech.gitlab.reg.token.1         
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+---  
+# Source: Ingage/templates/account.sca/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: accounttrans.config
+  labels:
+    spiretech.co/name: accountsca
+    spiretech.co/id: ac.sca.001
+    spiretech.co/app: ingage
+    spiretech.co/version: 0.1.0
+    app.kubernetes.io/name: ingage
+    helm.sh/chart: ingage-0.1.0
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/instance: release-name
+data:
+    base_directory : 'data'
+    model_name : 'LSTM'
+    deployed_model_object : 'deployed_model.h5'
+    PINO_LOG_FORMAT :  "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s"
+    # Log Level INFO | WARNING | DEBUG | CRITICAL | ERROR
+    PINO_LOG_LEVEL :  "INFO"
